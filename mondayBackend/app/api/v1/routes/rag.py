@@ -3,10 +3,12 @@ import shutil
 import uuid
 
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from app.api.dependencies import get_db
 from app.crud.crud_rag import create_rag, get_rag_detail
 from app.schemas.provider import Provider
+from app.schemas.query import QueryRequest
 from app.services.rag_creation_service import rag_creation_service
 from app.services.rag_service_factory import rag_service_factory
 
@@ -59,7 +61,7 @@ def initialize_rag(
     rag_id: str = Form(...)
 ):
     new_rag_details = get_rag_detail(db, rag_id=rag_id)
-    new_rag = rag_service_factory.get_service(rag=new_rag_details)
+    new_rag = rag_service_factory.get_service(rag=new_raxg_details)
 
     if new_rag is None:
         raise HTTPException(
@@ -70,3 +72,22 @@ def initialize_rag(
     return {
         "msg": "RAG initialized successfully"
     }
+
+@router.post("/chat")
+def chat_stream(
+    request: QueryRequest,
+    db: Session = Depends(get_db)
+):
+    query = request.query.strip()
+    if not query:
+        raise HTTPException(status_code=400, detail="Query cannot be empty.")
+    
+    rag_service = rag_service_factory.get_service(rag=request.rag)
+
+    if not rag_service.retriever or not rag_service.llm:
+        raise HTTPException(
+            status_code=503, 
+            detail="RAG system is not fully initialized. The retriever or LLM provider is unavailable."
+        )
+    
+    return StreamingResponse(rag_service.chat_stream(query, db), media_type="text/plain")
