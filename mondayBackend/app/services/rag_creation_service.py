@@ -1,6 +1,8 @@
-from pathlib import Path
 import logging
 import re
+
+from pathlib import Path
+from typing import Optional
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -16,7 +18,6 @@ logger = logging.getLogger(__name__)
 
 class RAGCreationService:
     _instance: Optional['RAGCreationService'] = None
-    _lock = False
 
     def __new__(cls):
         if not cls._instance:
@@ -107,6 +108,21 @@ class RAGCreationService:
             logger.error(f"Error in _load_documents: {e}")
             return []
         
+    def load_or_create_index(self, rag_id: str) -> Optional[VectorStoreIndex]:
+        try:
+            if (self.get_index_path(rag_id=rag_id)).exists():
+                logger.info(f"Loading existing LlamaIndex vector store from {self.get_index_path(rag_id=rag_id)}")
+                storage_context = StorageContext.from_defaults(persist_dir=str(self.index_path))
+                vector_store = load_index_from_storage(storage_context)
+                logger.info("LlamaIndex vector store loaded successfully.")
+                return vector_store
+            else:
+                logger.warning(f"No existing index found at {self.get_index_path(rag_id=rag_id)}.")
+                logger.warning(f"Creating new vector store at {self.get_index_path(rag_id=rag_id)}.")
+                return self._create_index_from_scratch(rag_id=rag_id)
+        except Exception as e:
+            logger.error(f"Error loading/creating LlamaIndex: {e}", exc_info=True)
+    
     def create_index(self, rag_id: str) -> Optional[VectorStoreIndex]:
         try:
             documents = self._load_documents(rag_id)
