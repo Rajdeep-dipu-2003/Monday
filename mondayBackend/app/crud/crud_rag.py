@@ -1,7 +1,7 @@
 from app.models.rag import RAG
 from sqlalchemy.orm import Session
 
-def create_rag(db: Session, *, name: str, description: str, model: str, provider: str) -> str:
+def create_rag_crud(db: Session, *, name: str, description: str, model: str, provider: str) -> str:
     new_rag = RAG(
         name = name,
         description = description,
