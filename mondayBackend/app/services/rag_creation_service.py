@@ -2,9 +2,12 @@ import logging
 import re
 
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_core.documents import Document as LangchainDocument
+from llama_index.core.schema import Document as LlamaDocument
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 
 from llama_index.core import (
     VectorStoreIndex,
@@ -36,7 +39,7 @@ class RAGCreationService:
     def _langchain_docs_to_llama(self, docs: List[LangchainDocument]) -> List[LlamaDocument]:
         return [LlamaDocument(text=doc.page_content, metadata=doc.metadata) for doc in docs]
     
-    def clean_document_content(content: str) -> str:
+    def _clean_document_content(self, content: str) -> str:
         if not content:
             return ""
 
@@ -99,7 +102,7 @@ class RAGCreationService:
                     continue
             cleaned_docs = []
             for doc in raw_documents:
-                cleaned_content = self._clean_document_content(doc.page_content)
+                cleaned_content = self._clean_document_content(content=doc.page_content)
                 if cleaned_content:
                     doc.page_content = cleaned_content
                     cleaned_docs.append(doc)
@@ -134,7 +137,14 @@ class RAGCreationService:
             chunks = text_splitter.split_documents(documents)
             llama_chunks = self._langchain_docs_to_llama(chunks)
 
-            index = VectorStoreIndex(llama_chunks, show_progress=True)
+            embed_model = HuggingFaceEmbedding(
+                model_name="BAAI/bge-small-en-v1.5"
+            )
+
+            index = VectorStoreIndex(
+                llama_chunks,
+                embed_model=embed_model
+            )
             index.storage_context.persist(persist_dir=str(self.get_index_path(rag_id)))
 
             logger.info(f"LlamaIndex vector store created and saved to {self.get_index_path(rag_id)}")
