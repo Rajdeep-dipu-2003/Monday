@@ -26,8 +26,7 @@ This makes Monday a **flexible and scalable AI platform** for real-world applica
 ### 💬 Chat Interface
 
 ```md
-![Chat Screen](mondayClient/public/chat.png)
-```
+![Chat Screen](https://raw.githubusercontent.com/Rajdeep-dipu-2003/Monday/main/mondayClient/public/chat.png)```
 
 ### 🏠 Home Screen
 
