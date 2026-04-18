@@ -23,22 +23,18 @@ This makes Monday a **flexible and scalable AI platform** for real-world applica
 
 > ⚠️ Make sure these files exist in your repo with correct names and extensions
 
-### 💬 Chat Interface
-
-```md
-![Chat Screen](https://raw.githubusercontent.com/Rajdeep-dipu-2003/Monday/main/mondayClient/public/chat.png)```
-
 ### 🏠 Home Screen
 
-```md
-![Home](mondayClient/public/home.png)
-```
+![Home](https://github.com/Rajdeep-dipu-2003/Monday/blob/main/mondayClient/public/home.png)
+
+### 💬 Chat Interface
+
+![Chat Screen](https://github.com/Rajdeep-dipu-2003/Monday/blob/main/mondayClient/public/chat.png)
+
 
 ### 🛠️ Model Creation
 
-```md
-![Creation](mondayClient/public/create.png)
-```
+![Creation](https://github.com/Rajdeep-dipu-2003/Monday/blob/main/mondayClient/public/create.png)
 
 ---
 
