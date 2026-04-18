@@ -1,16 +1,28 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { toast } from "react-hot-toast";
+import axios from "axios";
 
 function Chat() {
-    const [models, setModels] = useState([
-        { name: "llama3", provider: "ollama" },
-        { name: "mistral", provider: "ollama" },
-    ]); // TODO: fetch from API
-
     const [selectedModel, setSelectedModel] = useState(null);
     const [search, setSearch] = useState("");
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState("");
     const [showHistory, setShowHistory] = useState(true);
+    const [models, setModels] = useState([])
+
+    useEffect(() => {
+        const fetchUserModels = async () => {
+            try {
+                const response = await axios.get("http://0.0.0.0:8000/api/v1/models/get-user-models")
+                setModels(response.data.rags)
+
+            } catch (e) {
+                toast.error("Failed to get models. Please try again later")
+            }
+        }
+
+        fetchUserModels()
+    }, [])
 
     // Filter models
     const filteredModels = models.filter((m) =>
@@ -22,20 +34,57 @@ function Chat() {
         if (!input || !selectedModel) return;
 
         const userMessage = { role: "user", content: input };
-
         setMessages((prev) => [...prev, userMessage]);
         setInput("");
 
+        // placeholder for streaming response
+        let assistantMessage = { role: "rag", content: "" };
+        setMessages((prev) => [...prev, assistantMessage]);
+
         try {
-            // 🚀 API CALL HERE (RAG Chat)
-            // const res = await fetch("/api/chat", {...})
+            const response = await fetch("http://0.0.0.0:8000/api/v1/rag/chat", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    query: userMessage.content,
+                    rag_id: selectedModel.uuid,
+                }),
+            });
 
-            const fakeResponse = {
-                role: "assistant",
-                content: "This is a mock response from the model.",
-            };
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let buffer = "";
 
-            setMessages((prev) => [...prev, fakeResponse]);
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+                buffer += chunk;
+
+                if (buffer.includes("<<<SOURCES>>>")) {
+                    const [textPart, sourcesPart] = buffer.split("<<<SOURCES>>>");
+
+                    assistantMessage.content = textPart;
+
+                    try {
+                        assistantMessage.sources = JSON.parse(sourcesPart);
+                    } catch (e) { }
+
+                } else {
+                    assistantMessage.content += chunk;
+                }
+
+                // update UI in real-time
+                setMessages((prev) => {
+                    const updated = [...prev];
+                    updated[updated.length - 1] = { ...assistantMessage };
+                    return updated;
+                });
+            }
+
         } catch (err) {
             console.error(err);
         }
@@ -66,8 +115,8 @@ function Chat() {
                                 setMessages([]); // reset chat
                             }}
                             className={`p-2 rounded-lg cursor-pointer ${selectedModel?.name === m.name
-                                    ? "bg-gray-200"
-                                    : "hover:bg-gray-100"
+                                ? "bg-gray-200"
+                                : "hover:bg-gray-100"
                                 }`}
                         >
                             {m.name}
@@ -101,8 +150,8 @@ function Chat() {
                         <div
                             key={index}
                             className={`max-w-xl p-3 rounded-lg ${msg.role === "user"
-                                    ? "bg-gray-900 text-white ml-auto"
-                                    : "bg-gray-200"
+                                ? "bg-gray-900 text-white ml-auto"
+                                : "bg-gray-200"
                                 }`}
                         >
                             {msg.content}
