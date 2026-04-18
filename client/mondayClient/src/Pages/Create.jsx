@@ -1,16 +1,53 @@
-import { useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useCallback, useEffect } from "react";
+import { Form, useNavigate } from "react-router-dom";
 import { useDropzone } from "react-dropzone";
 import { toast } from "react-hot-toast";
+import axios from "axios"
 
 function Create() {
     const navigate = useNavigate();
 
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
-    const [model, setModel] = useState("gpt-4");
+    const [model, setModel] = useState({});
+    const [models, setModels] = useState([]);
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        const fetchModels = async () => {
+            try {
+                const res = await fetch("http://localhost:11434/api/tags");
+                const data = await res.json();
+
+                const LLM_FAMILIES = ["llama", "mistral", "qwen", "gemma", "phi"];
+                // const LLM_FAMILIES = []
+
+                const filtered = data.models
+                    .filter((m) => {
+                        const family = m.details?.family?.toLowerCase();
+                        return LLM_FAMILIES.includes(family);
+                    })
+                    .map((m) => m.name);
+
+                const formatted = filtered.map(m => ({
+                    name: m,
+                    provider: "ollama"
+                }));
+
+                setModels(formatted);
+
+                if (formatted.length > 0) {
+                    setModel(formatted[0]);
+                }
+
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        fetchModels();
+    }, []);
 
     // Drag & Drop handler
     const onDrop = useCallback((acceptedFiles) => {
@@ -47,21 +84,20 @@ function Create() {
         setLoading(true);
 
         try {
-            // 🚀 API CALL HERE
-            // const formData = new FormData();
-            // formData.append("name", name);
-            // formData.append("description", description);
-            // formData.append("model", model);
-            // files.forEach(file => formData.append("files", file));
-            //
-            // await fetch("/api/create-rag", {
-            //     method: "POST",
-            //     body: formData
-            // });
+            const formData = new FormData();
+            formData.append("name", name);
+            formData.append("description", description);
+            formData.append("model", model.name);
+            formData.append("provider", model.provider)
 
-            await new Promise((res) => setTimeout(res, 1500)); // simulate API
+            files.forEach((file) => {
+                formData.append("files", file)
+            });
 
-            toast.success("RAG model created successfully!");
+            await axios.post("http://0.0.0.0:8000/api/v1/rag/createrag", formData)
+            toast.success("RAG model created successfully!",{
+                duration: 5000
+            });
 
             navigate("/");
         } catch (err) {
@@ -105,15 +141,26 @@ function Create() {
                 {/* Model */}
                 <div className="mb-4">
                     <label className="block text-sm mb-1">Model *</label>
-                    <select
+
+                    {models.length === 0 && (
+                        <p className="text-sm text-gray-500 mt-2">
+                            No LLM models found. Install one using:
+                            <br />
+                            <span className="font-mono">ollama pull llama3</span>
+                        </p>
+                    )}
+
+                    {models.length !== 0 && (<select
                         className="w-full border border-gray-300 rounded-lg p-2"
-                        value={model}
+                        value={model.name}
                         onChange={(e) => setModel(e.target.value)}
                     >
-                        <option value="gpt-4">GPT-4</option>
-                        <option value="gpt-3.5">GPT-3.5</option>
-                        <option value="mistral">Mistral</option>
-                    </select>
+                        {models.map((m, index) => (
+                            <option key={index} value={m.name}>
+                                {m.name}
+                            </option>
+                        ))}
+                    </select>)}
                 </div>
 
                 {/* Drag & Drop Upload */}
