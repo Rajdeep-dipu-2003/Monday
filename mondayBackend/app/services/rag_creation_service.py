@@ -115,14 +115,21 @@ class RAGCreationService:
         try:
             if (self.get_index_path(rag_id=rag_id)).exists():
                 logger.info(f"Loading existing LlamaIndex vector store from {self.get_index_path(rag_id=rag_id)}")
-                storage_context = StorageContext.from_defaults(persist_dir=str(self.index_path))
+
+                embed_model = HuggingFaceEmbedding(
+                    model_name="sentence-transformers/all-MiniLM-L6-v2"
+                )
+
+                Settings.embed_model = embed_model
+
+                storage_context = StorageContext.from_defaults(persist_dir=str(self.get_index_path(rag_id=rag_id)))
                 vector_store = load_index_from_storage(storage_context)
                 logger.info("LlamaIndex vector store loaded successfully.")
                 return vector_store
             else:
                 logger.warning(f"No existing index found at {self.get_index_path(rag_id=rag_id)}.")
                 logger.warning(f"Creating new vector store at {self.get_index_path(rag_id=rag_id)}.")
-                return self._create_index_from_scratch(rag_id=rag_id)
+                return self.create_index(rag_id=rag_id)
         except Exception as e:
             logger.error(f"Error loading/creating LlamaIndex: {e}", exc_info=True)
     
@@ -138,7 +145,7 @@ class RAGCreationService:
             llama_chunks = self._langchain_docs_to_llama(chunks)
 
             embed_model = HuggingFaceEmbedding(
-                model_name="BAAI/bge-small-en-v1.5"
+                model_name="sentence-transformers/all-MiniLM-L6-v2"
             )
 
             index = VectorStoreIndex(
