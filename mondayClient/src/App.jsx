@@ -1,8 +1,10 @@
 import { HashRouter, Routes, Route } from "react-router-dom";
-import Home from "./Pages/Home"
-import Create from "./Pages/Create"
 import { Toaster } from "react-hot-toast";
 import Layout from "./Layouts/Layout";
+
+import Home from "./Pages/Home"
+import Create from "./Pages/Create"
+import Chat from "./Pages/Chat"
 
 import './App.css'
 
@@ -15,6 +17,7 @@ function App() {
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />
             <Route path="create" element={<Create />} />
+            <Route path="chat" element={<Chat />} />
           </Route>
         </Routes>
       </HashRouter>
